@@ -1,0 +1,215 @@
+/*const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const User = require('../models/user');
+const File = require('../models/file');
+
+// Multer configuration for file upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(5).toString('hex');
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+
+// Upload a file (encrypt and save)
+router.post('/fileR/upload', upload.single('file'), async (req, res, next) => {
+  try {
+    const { originalname, buffer } = req.file;
+
+    // Encrypt the file
+    const encryptionKey = crypto.randomBytes(32).toString('hex');
+    const initializationVector = crypto.randomBytes(16).toString('hex');
+    const fileData = encryptFile(buffer, encryptionKey, initializationVector);
+
+    // Save the encrypted file to the database
+    const file = new File({
+      filename: originalname,
+      fileData,
+      encryptionKey,
+      initializationVector,
+      owner: req.user._id
+    });
+    await file.save();
+
+    res.status(201).json(file);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all files belonging to a user
+router.get('/fileR', async (req, res, next) => {
+  try {
+    const files = await File.find({ owner: req.user._id });
+    res.json(files);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Decrypt and download a file
+router.get('/fileR/:id', async (req, res, next) => {
+  try {
+    const file = await File.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!file) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+
+    // Decrypt the file
+    const decryptedData = decryptFile(file.encryptedData, file.encryptionKey, file.initializationVector);
+
+    // Generate a unique filename for downloading
+    const downloadFilename = 'decrypted_' + file.filename;
+
+    // Write the decrypted file to disk
+    const filePath = path.join('downloads/', downloadFilename);
+    fs.writeFileSync(filePath, decryptedData);
+
+    // Set the appropriate headers for downloading the file
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+    res.sendFile(filePath);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Helper function to encrypt a file using AES-256-CBC algorithm
+function encryptFile(data, key, iv) {
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  let encryptedData = cipher.update(data, 'utf8', 'base64');
+  encryptedData += cipher.final('base64');
+  return encryptedData;
+}
+
+
+// Helper function to decrypt a file using AES-256-CBC algorithm
+function decryptFile(data, key, iv) {
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  let decryptedData = decipher.update(data, 'base64', 'binary');
+  decryptedData += decipher.final('binary');
+  return decryptedData;
+}
+
+module.exports = router;
+*/
+
+
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const crypto = require('crypto');
+const File = require('../models/file');
+
+// Configure Multer storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// Upload a file
+router.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const { originalname, buffer } = req.file;
+
+    // Generate encryption key and initialization vector
+    const encryptionKey = crypto.randomBytes(32).toString('hex');
+    const initializationVector = crypto.randomBytes(16).toString('hex');
+
+    // Encrypt the file data
+    const cipher = crypto.createCipheriv('aes-256-cbc', encryptionKey, initializationVector);
+    const encryptedData = Buffer.concat([cipher.update(buffer), cipher.final()]);
+
+    // Create a new file record
+    const file = new File({
+      filename: originalname,
+      encryptedData,
+      encryptionKey,
+      initializationVector,
+      owner: req.user._id
+    });
+
+    // Save the file record to the database
+    const savedFile = await file.save();
+
+    res.status(201).json(savedFile);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+/*
+router.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const { originalname, buffer } = req.file;
+
+    // Generate encryption key and initialization vector
+    const encryptionKey = crypto.randomBytes(32).toString('hex');
+    const initializationVector = crypto.randomBytes(16).toString('hex');
+
+    // Encrypt the file data
+    
+    const cipher = crypto.createCipheriv('aes-256-cbc', encryptionKey, initializationVector);
+    const encryptedData = Buffer.concat([cipher.update(buffer), cipher.final()]);
+
+    // Create a new file record
+    const file = new File({
+      filename: originalname,
+      encryptedData,
+      encryptionKey,
+      initializationVector,
+      owner: req.user._id
+    });
+
+    // Save the file record to the database
+    const savedFile = await file.save();
+
+    return res.status(201).json(savedFile);
+  } catch (error) {
+    console.error('Failed to upload file:', error);
+    return res.status(500).json({ error: 'Failed to upload file' });
+  }
+});*/
+
+
+
+// Download an encrypted file
+router.get('/download/:id', async (req, res) => {
+  try {
+    const fileId = req.params.id;
+
+    // Find the file by ID
+    const file = await File.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Check ownership or permission to download the file
+
+    // Decrypt the file data
+    const decipher = crypto.createDecipheriv('aes-256-cbc', file.encryptionKey, file.initializationVector);
+    const decryptedData = Buffer.concat([decipher.update(file.encryptedData), decipher.final()]);
+
+    // Set response headers for downloading the file
+    res.set({
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+      'Content-Type': 'application/octet-stream'
+    });
+
+    res.send(decryptedData);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to download file' });
+  }
+});
+
+module.exports = router;
