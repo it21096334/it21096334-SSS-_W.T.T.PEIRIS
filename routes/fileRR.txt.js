@@ -1,4 +1,4 @@
-const express = require('express');
+/*const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const crypto = require('crypto');
@@ -12,7 +12,7 @@ const upload = multer({ storage });
 
 
 // Route to handle file upload
-/*
+
 router.post('/upload', upload.single('file'),
     async (req, res, next) => {
   try {
@@ -39,7 +39,7 @@ router.post('/upload', upload.single('file'),
     next(error);
   }
 });
-*/
+
 router.post('/upload', upload.single('file'),
     async (req, res, next) => {
 
@@ -106,4 +106,4 @@ router.get('/files/:id', async (req, res, next) => {
   }
 });
 
-module.exports = router;
+module.exports = router;*/
