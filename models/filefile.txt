@@ -1,0 +1,48 @@
+/*const mongoose = require('mongoose');
+
+const fileSchema = new mongoose.Schema({
+  filename: { type: String, required: true },
+  fileData: { type: Buffer, required: true },
+  encryptionKey: { type: String, required: true },
+  initializationVector: { type: String, required: true },
+  metadata: { type: Object },
+  owner: { type: String }
+});
+
+const File = mongoose.model('File', fileSchema);
+
+module.exports = File;
+*/
+
+const mongoose = require('mongoose');
+
+const fileSchema = new mongoose.Schema({
+  filename: {
+    type: String,
+    required: true
+  },
+  encryptedData: {
+    type: Buffer,
+    required: true
+  },
+  encryptionKey: {
+    type: String,
+    required: true
+  },
+  initializationVector: {
+    type: String,
+    required: true
+  },
+  metadata: {
+    type: Object
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
+});
+
+const File = mongoose.model('File', fileSchema);
+
+module.exports = File;
